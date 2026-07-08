@@ -206,4 +206,31 @@ router.get("/stats", (_, res) => {
   });
 });
 
+// GET /api/thpt/dist?to_hop=D01&scope=quoc_gia
+router.get("/dist", (req, res) => {
+  const { to_hop, scope = "quoc_gia", ma_tinh, mien } = req.query;
+  const { mons, error } = parseMon(to_hop);
+  if (error) return res.status(400).json({ error });
+
+  const hasAll = mons.map(m => `${m} IS NOT NULL`).join(" AND ");
+  const colSum = mons.join("+");
+  let sw = "";
+  if (scope === "tinh" && ma_tinh) sw = `AND ma_tinh = ${ma_tinh}`;
+  if (scope === "mien" && mien)    sw = `AND mien = '${mien}'`;
+
+  // Tạo bins 0.5 điểm
+  const rows = db.prepare(`
+    SELECT ROUND((${colSum}) * 2) / 2 as bin, COUNT(*) as cnt
+    FROM diem_thi WHERE ${hasAll} ${sw}
+    GROUP BY bin ORDER BY bin
+  `).all();
+
+  const bins = rows.map(r => ({
+    range: `${r.bin}–${r.bin + 0.5}`,
+    count: r.cnt,
+  }));
+
+  return res.json({ to_hop, scope, bins });
+});
+
 module.exports = router;
