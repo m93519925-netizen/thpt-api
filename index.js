@@ -2,7 +2,7 @@ const fs    = require("fs");
 const https = require("https");
 const path  = require("path");
 
-const DB_PATH = process.env.DB_PATH || "/data/thpt2026.db";
+const DB_PATH = process.env.DB_PATH || "/data/db/thpt2026.db";
 const DB_URL  = process.env.DB_URL  || 
   "https://github.com/m93519925-netizen/thpt-api/releases/download/v1.0/thpt2026.db";
 
