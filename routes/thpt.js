@@ -233,4 +233,42 @@ router.get("/dist", (req, res) => {
   return res.json({ to_hop, scope, bins });
 });
 
+// GET /api/thpt/tinh-stats?to_hop=D01
+router.get("/tinh-stats", (req, res) => {
+  const { to_hop } = req.query;
+  const { mons, error } = parseMon(to_hop);
+  if (error) return res.status(400).json({ error });
+
+  const hasAll = mons.map(m => `${m} IS NOT NULL`).join(" AND ");
+  const colSum = mons.join("+");
+
+  const rows = db.prepare(`
+    SELECT
+      ma_tinh, tinh, mien,
+      COUNT(*)                        as so_thi_sinh,
+      ROUND(AVG(${colSum}), 3)        as diem_tb,
+      ROUND(MAX(${colSum}), 2)        as diem_max,
+      ROUND(MIN(${colSum}), 2)        as diem_min
+    FROM diem_thi
+    WHERE ${hasAll}
+    GROUP BY ma_tinh
+    ORDER BY diem_tb DESC
+  `).all();
+
+  return res.json({
+    to_hop, mons,
+    data: rows.map((r, i) => ({
+      rank:         i + 1,
+      ma_tinh:      String(r.ma_tinh).padStart(2,"0"),
+      tinh:         r.tinh,
+      mien:         r.mien,
+      mien_label:   MIEN_LABEL[r.mien] ?? r.mien,
+      so_thi_sinh:  r.so_thi_sinh,
+      diem_tb:      r.diem_tb,
+      diem_max:     r.diem_max,
+      diem_min:     r.diem_min,
+    })),
+  });
+});
+
 module.exports = router;
